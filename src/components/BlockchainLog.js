@@ -2,31 +2,42 @@ import React, { useEffect, useState } from "react";
 import API from "../api/api";
 
 /**
- * BlockchainLog.js (updated)
+ * BlockchainLog.js (fixed)
  * ─────────────────────────────────────────────────────────────
- * Changes from original:
- *   1. Log entries now display contractId (from smart contract additions).
- *   2. New "Verify Chain" button calls GET /api/system/verify-chain
- *      and shows the result inline — so users can confirm the
- *      audit log hasn't been tampered with, without leaving the UI.
- *   3. Chain-verification state (verifying, result) added.
- *   4. formatLog() updated to include contractId when present.
+ * Fix: getLogs now returns { logs, page, limit, total, pages }
+ * not a plain array. The old setLogs(res.data) set logs state
+ * to the whole object — then filteredLogs.map() crashed with
+ * TypeError because you can't .map() a plain object.
+ *
+ * Fix: extract res.data.logs for the array.
  */
 export default function BlockchainLog() {
-    const [logs, setLogs] = useState([]);
-    const [error, setError] = useState("");
-    const [filter, setFilter] = useState("ALL"); // ALL, DATA_REGISTER, ACCESS_REQUEST
+    const [logs, setLogs]               = useState([]);
+    const [totalLogs, setTotalLogs]     = useState(0);
+    const [error, setError]             = useState("");
+    const [filter, setFilter]           = useState("ALL");
 
-    // ── Chain verification state ───────────────────────────────
-    const [verifying, setVerifying] = useState(false);
-    const [verifyResult, setVerifyResult] = useState(null); // { valid, message, totalEntries, brokenAt }
+    const [verifying, setVerifying]         = useState(false);
+    const [verifyResult, setVerifyResult]   = useState(null);
 
-    // ── Fetch logs (unchanged) ─────────────────────────────────
     useEffect(() => {
         const fetchLogs = async () => {
             try {
                 const res = await API.get("/access/logs");
-                setLogs(res.data);
+
+                // FIX: response is now { logs: [], page, limit, total, pages }
+                // Previously was a plain array — setting res.data directly
+                // caused .map() to crash on the object.
+                const data = res.data;
+                if (Array.isArray(data)) {
+                    // Backward-compatible: handle plain array just in case
+                    setLogs(data);
+                    setTotalLogs(data.length);
+                } else {
+                    setLogs(data.logs || []);
+                    setTotalLogs(data.total || 0);
+                }
+
                 setError("");
             } catch (err) {
                 console.error("Failed to fetch logs:", err);
@@ -39,7 +50,6 @@ export default function BlockchainLog() {
         return () => clearInterval(interval);
     }, []);
 
-    // ── Chain verification ─────────────────────────────────────
     const verifyChain = async () => {
         setVerifying(true);
         setVerifyResult(null);
@@ -47,7 +57,6 @@ export default function BlockchainLog() {
             const res = await API.get("/system/verify-chain");
             setVerifyResult(res.data);
         } catch (err) {
-            // 409 Conflict is returned when chain is broken — still a valid response
             if (err.response?.data) {
                 setVerifyResult(err.response.data);
             } else {
@@ -61,47 +70,20 @@ export default function BlockchainLog() {
         }
     };
 
-    const formatDate = (timestamp) => {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
-    };
+    const formatDate = (timestamp) => new Date(timestamp).toLocaleString();
 
-    // ── Log formatter — now includes contractId ────────────────
     const formatLog = (log) => {
         const parts = [];
-
         parts.push(`[${formatDate(log.timestamp)}]`);
-
-        if (log.type === "DATA_REGISTER") {
-            parts.push("📝 DATA_REGISTER");
-        } else {
-            parts.push("🔐 ACCESS_REQUEST");
-        }
-
+        parts.push(log.type === "DATA_REGISTER" ? "📝 DATA_REGISTER" : "🔐 ACCESS_REQUEST");
         parts.push(`Hash: ${log.hash?.substring(0, 16)}...`);
-
         if (log.owner)     parts.push(`Owner: ${log.owner}`);
         if (log.role)      parts.push(`Role: ${log.role}`);
         if (log.attribute) parts.push(`Attribute: ${log.attribute}`);
-
-        if (log.policy && log.type === "DATA_REGISTER") {
-            parts.push(`Policy: ${log.policy}`);
-        }
-
-        if (log.granted !== undefined) {
-            parts.push(`Granted: ${log.granted ? "✅ YES" : "❌ NO"}`);
-        }
-
-        // New: show contract ID if present
-        if (log.contractId) {
-            parts.push(`Contract: ${log.contractId.substring(0, 12)}...`);
-        }
-
-        // New: show chain index
-        if (log.chainIndex !== undefined) {
-            parts.push(`#${log.chainIndex}`);
-        }
-
+        if (log.policy && log.type === "DATA_REGISTER") parts.push(`Policy: ${log.policy}`);
+        if (log.granted !== undefined) parts.push(`Granted: ${log.granted ? "✅ YES" : "❌ NO"}`);
+        if (log.contractId)  parts.push(`Contract: ${log.contractId.substring(0, 12)}...`);
+        if (log.chainIndex !== undefined) parts.push(`#${log.chainIndex}`);
         return parts.join(" | ");
     };
 
@@ -115,11 +97,10 @@ export default function BlockchainLog() {
             <div className="blockchain-header">
                 <h3>⛓️ Blockchain Audit Log</h3>
                 <div className="log-stats">
-                    <span className="stat-badge">{logs.length} Total Logs</span>
+                    <span className="stat-badge">{totalLogs} Total Logs</span>
                 </div>
             </div>
 
-            {/* Filter */}
             <div className="log-filter">
                 <label>Filter by Type:</label>
                 <select value={filter} onChange={(e) => setFilter(e.target.value)}>
@@ -129,7 +110,6 @@ export default function BlockchainLog() {
                 </select>
             </div>
 
-            {/* ── Verify Chain button ───────────────────────────── */}
             <div style={{ margin: "8px 0" }}>
                 <button
                     onClick={verifyChain}
@@ -176,21 +156,13 @@ export default function BlockchainLog() {
 
             {error && <div className="error">{error}</div>}
 
-            {/* Scrollable log container */}
             <div className="log-container">
                 {filteredLogs.length === 0 ? (
-                    <div className="no-logs">
-                        No logs available yet
-                    </div>
+                    <div className="no-logs">No logs available yet</div>
                 ) : (
                     filteredLogs.map((l, i) => (
-                        <div
-                            key={i}
-                            className={`log-entry ${l.type.toLowerCase()}`}
-                        >
-                            <div className="log-content">
-                                {formatLog(l)}
-                            </div>
+                        <div key={i} className={`log-entry ${l.type?.toLowerCase()}`}>
+                            <div className="log-content">{formatLog(l)}</div>
                         </div>
                     ))
                 )}
