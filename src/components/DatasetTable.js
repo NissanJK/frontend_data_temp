@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from "react";
 import API from "../api/api";
 
+/**
+ * DatasetTable.js (fixed)
+ * Polling interval: 3s → 30s
+ * Dataset records don't change faster than someone can upload them.
+ * 3s polling was contributing 20 req/min to the rate limit budget.
+ * 30s contributes 2 req/min — a 10x reduction with zero UX impact.
+ */
 export default function DatasetTable() {
-    const [data, setData] = useState([]);
-    const [error, setError] = useState("");
+    const [data, setData]       = useState([]);
+    const [error, setError]     = useState("");
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -19,22 +26,20 @@ export default function DatasetTable() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 3000);
+        // FIX: 3000 → 30000. Dataset records don't change every 3 seconds.
+        const interval = setInterval(fetchData, 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const formatDate = (timestamp) => {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
-    };
+    const formatDate = (timestamp) => new Date(timestamp).toLocaleString();
 
     const downloadCSV = async () => {
         setLoading(true);
         try {
             const res = await API.get("/dataset/export");
             const blob = new Blob([res.data], { type: "text/csv" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
+            const a    = document.createElement("a");
+            a.href     = URL.createObjectURL(blob);
             a.download = `DataTrust-SC_dataset_${Date.now()}.csv`;
             a.click();
             URL.revokeObjectURL(a.href);
@@ -46,9 +51,8 @@ export default function DatasetTable() {
         }
     };
 
-    const displayValue = (value) => {
-        return value !== null && value !== undefined ? value : '-';
-    };
+    const displayValue = (value) =>
+        value !== null && value !== undefined ? value : "-";
 
     return (
         <div className="card dataset-card">
@@ -61,7 +65,6 @@ export default function DatasetTable() {
 
             {error && <div className="error" style={{ marginTop: "10px" }}>{error}</div>}
 
-            {/* FIXED: Scrollable table container */}
             <div className="table-container-scrollable">
                 <table className="dataset-table">
                     <thead>
@@ -93,12 +96,8 @@ export default function DatasetTable() {
                                 <tr key={d._id || i} className="table-row">
                                     <td>{i + 1}</td>
                                     <td>{formatDate(d.createdAt)}</td>
-                                    <td>{displayValue(d.metadata?.ownerRole||d.metadata?.Data_Owner)}</td>
-                                    <td>
-                                        <span className="sector-badge">
-                                            {displayValue(d.metadata?.Sector)}
-                                        </span>
-                                    </td>
+                                    <td>{displayValue(d.metadata?.ownerRole || d.metadata?.Data_Owner)}</td>
+                                    <td><span className="sector-badge">{displayValue(d.metadata?.Sector)}</span></td>
                                     <td>{displayValue(d.metadata?.Data_Provider_Type)}</td>
                                     <td>{displayValue(d.metadata?.Data_Category)}</td>
                                     <td>{displayValue(d.metadata?.Temperature_C)}</td>
@@ -108,9 +107,7 @@ export default function DatasetTable() {
                                     <td>{displayValue(d.metadata?.Blockchain_Tx_Cost_Gas)}</td>
                                     <td>{displayValue(d.metadata?.Authorization_Latency_sec)}</td>
                                     <td className="hash-cell">
-                                        <span title={d.hash}>
-                                            {d.hash?.substring(0, 12)}...
-                                        </span>
+                                        <span title={d.hash}>{d.hash?.substring(0, 12)}...</span>
                                     </td>
                                 </tr>
                             ))
