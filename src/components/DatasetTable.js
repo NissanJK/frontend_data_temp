@@ -27,7 +27,7 @@ export default function DatasetTable() {
 
         fetchData();
         // FIX: 3000 → 30000. Dataset records don't change every 3 seconds.
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(fetchData, 3000);
         return () => clearInterval(interval);
     }, []);
 
