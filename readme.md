@@ -30,32 +30,40 @@ React-based frontend application for DataTrust-SC - a privacy-preserving smart c
 
 ```
 DataTrust-SC_frontend/
-├── public/
+├── public
+│   ├── android-chrome-192x192.png
+│   ├── android-chrome-512x512.png
+│   ├── apple-touch-icon.png
+│   ├── favicon-16x16.png
+│   ├── favicon-32x32.png
+│   ├── favicon.ico
 │   ├── index.html
-│   └── favicon.ico
-├── src/
-│   ├── components/           # React components
-│   │   ├── Header.js                # App header with reset button
-│   │   ├── DataOwnerUpload.js       # Data submission form
-│   │   ├── DataRequester.js         # Access request interface
-│   │   ├── ImportDataset.js         # CSV import component
-│   │   ├── LiveDataGenerator.js     # Real-time data simulation
-│   │   ├── DatasetTable.js          # Dataset viewer with scrolling
-│   │   ├── BlockchainLog.js         # Audit log viewer
-│   │   ├── DisasterCenter.js        # Disaster monitoring dashboard
-│   │   ├── Analytics.js             # Analytics & charts dashboard
-│   │   ├── SectorDetails.js         # Detailed sector monitoring
-│   │   ├── DisasterCenter.css       # Disaster center styles
-│   │   ├── Analytics.css            # Analytics styles
-│   │   └── SectorDetails.css        # Sector details styles
-│   ├── api/
-│   │   └── api.js            # Axios configuration
-│   ├── App.js                # Main app component
-│   ├── index.js              # React entry point
-│   └── style.css             # Global styles
-├── .env.production           # Production environment variables
-├── package.json              # Dependencies
-└── README.md                 # This file
+│   ├── logo.PNG
+│   └── site.webmanifest
+├── src
+│   ├── api
+│   │   └── api.js
+│   ├── components
+│   │   ├── Analytics.css
+│   │   ├── Analytics.js
+│   │   ├── BlockchainLog.js
+│   │   ├── DataOwnerUpload.js
+│   │   ├── DataRequester.js
+│   │   ├── DatasetTable.js
+│   │   ├── DisasterCenter.css
+│   │   ├── DisasterCenter.js
+│   │   ├── Header.js
+│   │   ├── ImportDataset.js
+│   │   └── LiveDataGenerator.js
+│   ├── App.css
+│   ├── App.js
+│   ├── index.css
+│   ├── index.js
+│   └── style.css
+├── .gitignore
+├── package-lock.json
+├── package.json
+└── readme.md
 ```
 
 ## 📦 Installation
@@ -70,7 +78,7 @@ DataTrust-SC_frontend/
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/NissanJK/DataTrust-SC_frontend.git
+git clone https://github.com/NissanJK/frontend_data_temp.git
 ```
 
 2. **Install dependencies**
